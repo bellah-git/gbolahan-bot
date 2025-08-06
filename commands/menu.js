@@ -1,36 +1,16 @@
+const fs = require('fs');
+
 module.exports = {
   name: 'menu',
   execute(msg) {
-    const menu = `
-╭───❏ *FULL BOT MENU* ❏───╮
+    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+    const commandNames = commandFiles.map(file => '.' + file.replace('.js', ''));
 
-• .rizz
-• .roast
-• .trivia
-• .menu
-• .setmode public/private
-• .sticker
-• .image
-• .promote
-• .demote
-• .tagall
-• .antispam on/off
-• .ytmp3 [link]
-• .ytmp4 [link]
-• .tiktok [link]
-• .instagram [link]
-• .ai [your message]
-• .fasttype
-• .math
-• .guessnum
-• .truth
-• .dare
-• .riddle
-• .typebattle
+    const menuText = `🧾 *Bellah Bot Menu*\n\n` +
+                     commandNames.join('\n') +
+                     `\n\n🤖 Bot by: *Gbolahan* (@bellah-git)\nTotal: ${commandNames.length} commands`;
 
-╰──────────────╯
-_Bot by: Gbolahan_
-`;
-    msg.reply(menu);
+    msg.reply(menuText);
   }
 };
+
