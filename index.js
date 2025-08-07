@@ -1,82 +1,106 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const { default: makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion, makeInMemoryStore, DisconnectReason } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
 const fs = require('fs');
-const chalk = require('chalk');
 const path = require('path');
 
-// ========== CONFIG ==========
-const OWNER_NUMBER = '2349038158275'; // <- Replace with your full WhatsApp number (country code, no +)
-let botMode = 'public'; // 'public' or 'private'
-// ============================
+const { state, saveState } = useSingleFileAuthState('./auth.json');
+
+const commands = new Map();
+const prefix = '.';
+let isPublic = true;
+
+const ownerNumber = '2349038158275@s.whatsapp.net'; // <<< replace with your full WhatsApp number
 
 // Load commands
-const commands = new Map();
-const cmdPath = path.join(__dirname, 'commands');
-fs.readdirSync(cmdPath).forEach(file => {
-  if (file.endsWith('.js')) {
-    const cmd = require(`./commands/${file}`);
-    commands.set(cmd.name, cmd);
-  }
-});
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    commands.set(command.name, command);
+}
 
-// Init client
-const client = new Client({
-  authStrategy: new LocalAuth(),
-  puppeteer: {
-    args: ['--no-sandbox']
-  }
-});
-
-client.on('qr', qr => {
-  console.log(chalk.yellow('[!] Scan the QR Code below:\n'));
-  qrcode.generate(qr, { small: true });
-});
-
-client.on('ready', () => {
-  console.log(chalk.green('[✓] Bot is ready!'));
-});
-
-client.on('message', async msg => {
-  const from = msg.from;
-  const sender = msg.author || msg.from;
-  const isGroup = msg.from.endsWith('@g.us');
-  const body = msg.body.trim();
-  
-  // Only respond to dot-prefixed commands
-  if (!body.startsWith('.')) return;
-
-  const args = body.slice(1).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
-
-  // Public/private mode check
-  if (botMode === 'private' && sender !== `${OWNER_NUMBER}@c.us`) {
-    return;
-  }
-
-  // Built-in commands
-  if (command === 'menu') {
-    let response = `*🤖 Bellah WhatsApp Bot Commands:*\n\n`;
-    commands.forEach((cmd, name) => {
-      response += `• .${name}\n`;
+// Create client
+async function startBot() {
+    const { version } = await fetchLatestBaileysVersion();
+    const sock = makeWASocket({
+        version,
+        printQRInTerminal: true,
+        auth: state,
+        getMessage: async (key) => ({ conversation: 'hello' })
     });
-    response += `\n_Bot Mode: ${botMode.toUpperCase()}_`;
-    msg.reply(response);
-  } else if (command === 'setmode') {
-    if (sender !== `${OWNER_NUMBER}@c.us`) return msg.reply('⛔ Owner-only command.');
-    const mode = args[0];
-    if (mode !== 'public' && mode !== 'private') {
-      return msg.reply('Usage: .setmode public/private');
-    }
-    botMode = mode;
-    msg.reply(`✅ Bot mode set to *${mode.toUpperCase()}*`);
-  } else if (commands.has(command)) {
-    try {
-      await commands.get(command).execute(msg, args, client);
-    } catch (err) {
-      msg.reply('❌ Error executing command.');
-      console.error(err);
-    }
-  }
-});
 
-client.initialize();
+    sock.ev.on('creds.update', saveState);
+
+    sock.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message) return;
+        const from = msg.key.remoteJid;
+        const isGroup = from.endsWith('@g.us');
+        const sender = isGroup ? msg.key.participant : msg.key.remoteJid;
+        const isOwner = sender === ownerNumber;
+
+        let text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+        if (!text.startsWith(prefix)) return;
+        const [commandName, ...args] = text.slice(1).trim().split(/\s+/);
+        const command = commands.get(commandName.toLowerCase());
+        if (!command) return;
+
+        // Group metadata
+        let groupMetadata = {};
+        let groupAdmins = [];
+        let isAdmin = false;
+
+        if (isGroup) {
+            try {
+                groupMetadata = await sock.groupMetadata(from);
+                groupAdmins = groupMetadata.participants.filter(p => p.admin).map(p => p.id);
+                isAdmin = groupAdmins.includes(sender);
+            } catch (e) {
+                console.error('Group metadata error:', e);
+            }
+        }
+
+        // .setmode handling
+        if (commandName === 'setmode') {
+            if (!isOwner) return sock.sendMessage(from, { text: 'Only the owner can change bot mode.' });
+            const mode = args[0];
+            if (mode === 'private') {
+                isPublic = false;
+                return sock.sendMessage(from, { text: 'Bot mode set to *private* (owner only).' });
+            } else if (mode === 'public') {
+                isPublic = true;
+                return sock.sendMessage(from, { text: 'Bot mode set to *public* (everyone can use).' });
+            } else {
+                return sock.sendMessage(from, { text: 'Usage: .setmode public / private' });
+            }
+        }
+
+        if (!isPublic && !isOwner) return;
+
+        try {
+            await command.run(sock, msg, args, {
+                from,
+                sender,
+                isGroup,
+                groupAdmins,
+                isAdmin,
+                isOwner,
+                metadata: groupMetadata
+            });
+        } catch (err) {
+            console.error(err);
+            sock.sendMessage(from, { text: '❌ Error running command.' });
+        }
+    });
+
+    sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('connection closed, reconnecting...', shouldReconnect);
+            if (shouldReconnect) startBot();
+        } else if (connection === 'open') {
+            console.log('Bot is now connected');
+        }
+    });
+}
+
+startBot();
