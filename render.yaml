@@ -9,7 +9,7 @@ services:
     buildCommand: |
       npm install
       chmod +x start.sh
-    startCommand: ./start.sh
+    startCommand: node index.js
     autoDeploy: true
     envVars:
       - key: SESSION_ID
