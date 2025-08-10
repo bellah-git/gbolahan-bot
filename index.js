@@ -2,12 +2,10 @@ const {
     default: makeWASocket, 
     useSingleFileAuthState, 
     fetchLatestBaileysVersion, 
-    makeInMemoryStore, 
     DisconnectReason 
 } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
-const path = require('path');
 
 // ======== LOAD SESSION FROM ENV (RENDER) ========
 if (process.env.SESSION_ID) {
@@ -20,7 +18,7 @@ const { state, saveState } = useSingleFileAuthState('./auth.json');
 const commands = new Map();
 const prefix = '.';
 let isPublic = true;
-const ownerNumber = '2349038158275@s.whatsapp.net'; // change if needed
+const ownerNumber = '2349038158275@s.whatsapp.net';
 
 // ======== LOAD COMMANDS ========
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
@@ -35,7 +33,7 @@ async function startBot() {
 
     const sock = makeWASocket({
         version,
-        printQRInTerminal: !process.env.SESSION_ID, // only show QR if no session
+        printQRInTerminal: !process.env.SESSION_ID,
         auth: state,
         getMessage: async () => ({ conversation: 'hello' })
     });
@@ -46,7 +44,7 @@ async function startBot() {
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message) return;
-        
+
         const from = msg.key.remoteJid;
         const isGroup = from.endsWith('@g.us');
         const sender = isGroup ? msg.key.participant : msg.key.remoteJid;
@@ -124,6 +122,5 @@ async function startBot() {
     });
 }
 
-// ======== START ========
 startBot();
 
