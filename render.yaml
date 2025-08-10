@@ -2,9 +2,10 @@ services:
   - type: web
     name: bellah-whatsappbot
     env: node
+    region: frankfurt
+    plan: free
+    branch: main
     buildCommand: npm install
     startCommand: bash start.sh
-    plan: free
-    region: frankfurt
-    branch: main
     autoDeploy: true
+
