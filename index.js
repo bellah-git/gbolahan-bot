@@ -18,7 +18,7 @@ const { state, saveState } = useSingleFileAuthState('./auth.json');
 const commands = new Map();
 const prefix = '.';
 let isPublic = true;
-const ownerNumber = '2349038158275@s.whatsapp.net';
+const ownerNumber = '2349038158275@s.whatsapp.net'; // change if needed
 
 // ======== LOAD COMMANDS ========
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
@@ -40,11 +40,10 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveState);
 
-    // ======== MESSAGE HANDLER ========
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg.message) return;
-
+        
         const from = msg.key.remoteJid;
         const isGroup = from.endsWith('@g.us');
         const sender = isGroup ? msg.key.participant : msg.key.remoteJid;
@@ -109,7 +108,6 @@ async function startBot() {
         }
     });
 
-    // ======== CONNECTION HANDLER ========
     sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
         if (connection === 'close') {
             const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
