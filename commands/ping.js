@@ -5,7 +5,9 @@ module.exports = {
     try {
       await sock.sendMessage(msg.key.remoteJid, { text: 'pong' }, { quoted: msg });
     } catch (e) {
-      console.error('ping command error', e);
+      console.error('ping error', e);
     }
   }
 };
+
+
