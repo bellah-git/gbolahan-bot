@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bellah-whatsappbot
+    name: gbolahan-whatsappbot
     env: node
     plan: free
     branch: main
@@ -9,7 +9,8 @@ services:
     startCommand: node index.js
     autoDeploy: true
     envVars:
-      - key: SESSION_ID
-        sync: false
+      - key: NODE_ENV
+        value: production
+
 
 
