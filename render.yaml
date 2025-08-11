@@ -1,19 +1,15 @@
 services:
-  - type: background
-    name: gbolahan-bot
+  - type: web
+    name: bellah-whatsappbot
     env: node
     plan: free
-    region: frankfurt
     branch: main
-    rootDir: /
-    buildCommand: |
-      npm install
-      chmod +x start.sh
+    rootDir: ./
+    buildCommand: npm install
     startCommand: node index.js
     autoDeploy: true
     envVars:
       - key: SESSION_ID
         sync: false
-
 
 
