@@ -8,22 +8,21 @@ const {
 const { Boom } = require('@hapi/boom');
 const fs = require('fs');
 const path = require('path');
-const express = require('express');
 const pino = require('pino');
 
 const COMMANDS_DIR = path.join(__dirname, 'commands');
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 
 const prefix = '.';
-let isPublic = true; // "anyone" = public by default
+let isPublic = true;
 const ownerNumber = process.env.OWNER_NUMBER || '2349038158275@s.whatsapp.net';
-const PORT = process.env.PORT || 3000;
+
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
-// ensure commands dir exists
+// Ensure commands directory exists
 if (!fs.existsSync(COMMANDS_DIR)) fs.mkdirSync(COMMANDS_DIR, { recursive: true });
 
-// restore creds.json if SESSION_ID provided (base64 of creds.json)
+// Restore creds.json if SESSION_ID env var exists
 function restoreCredsFromEnv() {
   if (!process.env.SESSION_ID) return false;
   try {
@@ -38,24 +37,29 @@ function restoreCredsFromEnv() {
   }
 }
 
-// dynamic command loader (supports run OR execute)
+// Command map: name => { name, description, handler }
 const commands = new Map();
+
 function loadCommands() {
   commands.clear();
   if (!fs.existsSync(COMMANDS_DIR)) return;
   const files = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith('.js'));
   for (const file of files) {
-    const full = path.join(COMMANDS_DIR, file);
+    const fullPath = path.join(COMMANDS_DIR, file);
     try {
-      delete require.cache[require.resolve(full)];
-      const mod = require(full);
+      delete require.cache[require.resolve(fullPath)];
+      const mod = require(fullPath);
       const name = mod.name || path.basename(file, '.js');
       const fn = typeof mod.execute === 'function' ? mod.execute : (typeof mod.run === 'function' ? mod.run : null);
       if (!fn) {
         logger.warn(`Skipping ${file}: no execute/run function`);
         continue;
       }
-      commands.set(name.toLowerCase(), { name, description: mod.description || '', handler: fn });
+      commands.set(name.toLowerCase(), {
+        name,
+        description: mod.description || '',
+        handler: fn
+      });
       logger.info(`Loaded command: ${name}`);
     } catch (e) {
       logger.error(`Failed to load command ${file}:`, e);
@@ -64,11 +68,10 @@ function loadCommands() {
   logger.info(`Total commands loaded: ${commands.size}`);
 }
 
-// builds .menu text automatically
 function buildMenuText() {
   const list = [];
-  for (const c of commands.values()) {
-    list.push(`${prefix}${c.name}${c.description ? ' — ' + c.description : ''}`);
+  for (const cmd of commands.values()) {
+    list.push(`${prefix}${cmd.name}${cmd.description ? ' — ' + cmd.description : ''}`);
   }
   return `Commands (${commands.size}):\n\n` + list.join('\n');
 }
@@ -86,7 +89,7 @@ async function startBot() {
       version,
       printQRInTerminal: !process.env.SESSION_ID,
       auth: state,
-      logger: pino({ level: 'silent' })
+      logger: pino({ level: 'silent' }),
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -107,18 +110,17 @@ async function startBot() {
       }
     });
 
-    // messages handler
-    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    sock.ev.on('messages.upsert', async ({ messages }) => {
       const m = messages?.[0];
       if (!m || !m.message) return;
-      if (m.key && m.key.remoteJid === 'status@broadcast') return;
+      if (m.key.remoteJid === 'status@broadcast') return;
 
       const from = m.key.remoteJid;
       const isGroup = from.endsWith('@g.us');
-      const sender = isGroup ? m.key.participant : m.key.remoteJid;
+      const sender = isGroup ? m.key.participant : from;
       const isOwner = sender === ownerNumber;
 
-      // extract text from common types
+      // Extract message text
       const msgType = Object.keys(m.message)[0];
       let text = '';
       if (msgType === 'conversation') text = m.message.conversation || '';
@@ -128,13 +130,12 @@ async function startBot() {
       else if (msgType === 'buttonsResponseMessage') text = m.message.buttonsResponseMessage?.selectedButtonId || '';
       else if (msgType === 'listResponseMessage') text = m.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
 
-      if (!text) return;
       if (!text.startsWith(prefix)) return;
 
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const cmdName = (args.shift() || '').toLowerCase();
 
-      // built-in actions
+      // Built-in commands
       if (cmdName === 'menu') {
         return sock.sendMessage(from, { text: buildMenuText() }, { quoted: m });
       }
@@ -155,30 +156,22 @@ async function startBot() {
         }
       }
 
-      // respect private mode
       if (!isPublic && !isOwner) return;
 
       const cmd = commands.get(cmdName);
-      if (!cmd) return; // unknown command
+      if (!cmd) return;
 
- try {
-  await command.execute(message, args);
-} catch (error) {
-  console.error(`Error executing command ${commandName}:`, error);
-  message.reply(`Error executing command: ${error.message}`);
-}
-
-
+      try {
+        await cmd.handler(sock, m, args, { from, isGroup, sender, isOwner, isPublic, commands });
+      } catch (error) {
+        logger.error(`Error executing command ${cmdName}:`, error);
+        await sock.sendMessage(from, { text: `Error executing command: ${error.message}` }, { quoted: m });
+      }
+    });
   } catch (err) {
     logger.error('startBot error:', err);
     setTimeout(startBot, 5000);
   }
 }
 
-// Express keep alive server
-const app = express();
-app.get('/', (req, res) => res.send('gbolahan-bot running'));
-app.listen(PORT, () => {
-  logger.info(`HTTP server listening on ${PORT}`);
-  startBot();
-});
+startBot();
