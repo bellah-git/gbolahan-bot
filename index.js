@@ -161,14 +161,13 @@ async function startBot() {
       const cmd = commands.get(cmdName);
       if (!cmd) return; // unknown command
 
-      try {
-        // handler signature: handler(sock, msg, args, context)
-        await cmd.handler(sock, m, args, { from, sender, isGroup, isOwner });
-      } catch (e) {
-        logger.error(`Error executing ${cmdName}:`, e);
-        try { await sock.sendMessage(from, { text: '❌ Error executing command.' }, { quoted: m }); } catch {}
-      }
-    });
+ try {
+  await command.execute(message, args);
+} catch (error) {
+  console.error(`Error executing command ${commandName}:`, error);
+  message.reply(`Error executing command: ${error.message}`);
+}
+
 
   } catch (err) {
     logger.error('startBot error:', err);
