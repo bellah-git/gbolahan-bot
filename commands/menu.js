@@ -1,38 +1,59 @@
-const fs = require("fs");
-
 module.exports = {
-    name: "menu",
-    description: "Show the list of all commands.",
-    async execute(sock, m) {
-        const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
-        let games = [];
-        let fun = [];
-        let group = [];
-        let utility = [];
+  name: "menu",
+  description: "Shows all commands in styled format",
+  execute(msg) {
+    const menuText = `
+🌟 ꜱᴏᴜʟㅤ㋦ — Fun & Games 🌟
+🎯 .rizz – Smooth or funny pickup lines.
+🔥 .roast – Playfully roast your friends.
+💔 .crush – Fun random crush reveal.
+💀 .kill – Playful “elimination” joke.
+🪙 .coinflip – Flip a coin.
+🧠 .trivia – Quiz questions to test knowledge.
+🕵️ .riddle – Gives you a riddle to solve.
+🔀 .scramble – Unscramble the given word.
+🔠 .anagram – Solve an anagram challenge.
+⌨️ .typebattle – Compete to type the fastest.
+⚡ .fasttype – Test fast typing skills.
+🎲 .guessnum – Guess the secret number.
+🔢 .fastmath – Solve math problems quickly.
+➕ .math – Do custom math calculations.
+🧮 .quickcalc – Quick calculation tool.
+🤔 .truth – Random truth question.
+😈 .dare – Random dare challenge.
+🎭 .emojiquiz – Guess the phrase from emojis.
+🪞 .mirror – Repeat your message creatively.
+😡 .mostannoying – Send something annoying.
+🗯️ .insult – Random playful insult.
 
-        for (const file of commandFiles) {
-            const command = require(`./${file}`);
-            if (!command.name) continue;
+🛡️ ꜱᴏᴜʟㅤ㋦ — Moderation 🛡️
+🚪 .kick – Remove a member.
+🚪 .kickall – Remove all non-admin members.
+➕ .add – Add a member.
+⬆️ .promote – Promote a member to admin.
+⬇️ .demote – Remove admin rights.
+📣 .tagall – Mention everyone in the group.
+📢 .tagadmin – Mention all admins.
+⚠️ .warn – Warn a member.
+👋 .welcome – Enable/disable welcome messages.
+🔗 .grouplink – Get the group link.
+🛡️ .antispam – Enable anti-spam protection.
+❄️ .freeze – Temporarily “freeze” group activity.
 
-            // Simple category grouping by file name
-            if (["riddle","trivia","fasttype","guessnum","scramble","coinflip","anagram","math","fastmath","emojiquiz","typebattle","whoisfast"].includes(command.name)) {
-                games.push(command.name);
-            } else if (["roast","rizz","truth","dare","insult","kill","crush","confess","secret","mirror","motiv8","mostannoying"].includes(command.name)) {
-                fun.push(command.name);
-            } else if (["add","kick","kickall","promote","demote","warn","welcome","tagall","tagadmin","antispam","grouplink","freeze","hijack","hidetag"].includes(command.name)) {
-                group.push(command.name);
-            } else {
-                utility.push(command.name);
-            }
-        }
+🤖 ꜱᴏᴜʟㅤ㋦ — AI & Info 🤖
+💬 .confess – Send an anonymous confession.
+📜 .motiv8 – Get a motivational quote.
+📊 .ping – Check bot’s response time.
+📜 .secret – Send a hidden/secret message.
 
-        let text = `ꜱᴏᴜʟㅤ㋦  |  ᴍᴇɴᴜ 📜\n\n`;
+👑 ꜱᴏᴜʟㅤ㋦ — Owner Only 👑
+🔄 .setmode – Switch between public/private mode.
+♻️ .restart – Restart the bot.
+⛔ .shutdown – Turn off the bot.
+📢 .bc – Broadcast a message.
+📋 .menu – Show all commands menu.
+`;
 
-        text += `🎮 *Games*\n${games.map(c => "• " + c).join("\n")}\n\n`;
-        text += `😂 *Fun*\n${fun.map(c => "• " + c).join("\n")}\n\n`;
-        text += `👥 *Group*\n${group.map(c => "• " + c).join("\n")}\n\n`;
-        text += `⚙️ *Utility*\n${utility.map(c => "• " + c).join("\n")}\n\n`;
-
-        m.reply(text.trim());
-    }
+    msg.reply(menuText);
+  }
 };
