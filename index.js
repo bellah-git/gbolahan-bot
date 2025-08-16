@@ -12,34 +12,29 @@ const pino = require('pino');
 
 const COMMANDS_DIR = path.join(__dirname, 'commands');
 const AUTH_DIR = path.join(__dirname, 'auth_info');
-
 const prefix = '.';
 let isPublic = true;
 const ownerNumber = process.env.OWNER_NUMBER || '2349038158275@s.whatsapp.net';
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
-// Ensure commands directory exists
-if (!fs.existsSync(COMMANDS_DIR)) fs.mkdirSync(COMMANDS_DIR, { recursive: true });
-
-// Restore creds.json if SESSION_ID env var exists
+// Restore creds.json from env if exists
 function restoreCredsFromEnv() {
   if (!process.env.SESSION_ID) return false;
   try {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
     const decoded = Buffer.from(process.env.SESSION_ID, 'base64').toString('utf-8');
     fs.writeFileSync(path.join(AUTH_DIR, 'creds.json'), decoded, 'utf-8');
-    logger.info('Restored auth_info/creds.json from SESSION_ID env var');
+    logger.info('Restored creds.json from SESSION_ID');
     return true;
   } catch (e) {
-    logger.error('Failed to restore creds from SESSION_ID:', e);
+    logger.error('Failed to restore creds:', e);
     return false;
   }
 }
 
-// Command map: name => { name, description, handler }
+// Command map
 const commands = new Map();
-
 function loadCommands() {
   commands.clear();
   if (!fs.existsSync(COMMANDS_DIR)) return;
@@ -50,22 +45,18 @@ function loadCommands() {
       delete require.cache[require.resolve(fullPath)];
       const mod = require(fullPath);
       const name = mod.name || path.basename(file, '.js');
-      const fn = typeof mod.execute === 'function' ? mod.execute : (typeof mod.run === 'function' ? mod.run : null);
-      if (!fn) {
-        logger.warn(`Skipping ${file}: no execute/run function`);
-        continue;
-      }
+      const fn = mod.execute || mod.run;
+      if (!fn) continue;
       commands.set(name.toLowerCase(), {
         name,
         description: mod.description || '',
         handler: fn
       });
-      logger.info(`Loaded command: ${name}`);
+      logger.info(`Loaded: ${name}`);
     } catch (e) {
-      logger.error(`Failed to load command ${file}:`, e);
+      logger.error(`Failed to load ${file}:`, e);
     }
   }
-  logger.info(`Total commands loaded: ${commands.size}`);
 }
 
 function buildMenuText() {
@@ -81,7 +72,6 @@ async function startBot() {
     restoreCredsFromEnv();
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
-    logger.info('Using WA version: %s', version.join('.'));
 
     loadCommands();
 
@@ -93,17 +83,13 @@ async function startBot() {
     });
 
     sock.ev.on('creds.update', saveCreds);
-
-    sock.ev.on('connection.update', (update) => {
-      const { connection, lastDisconnect } = update;
+    sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
       if (connection === 'close') {
         const reason = new Boom(lastDisconnect?.error).output?.statusCode;
-        logger.warn('Connection closed. Reason: %s', reason);
         if (reason !== DisconnectReason.loggedOut) {
-          logger.info('Reconnecting in 2s...');
           setTimeout(startBot, 2000);
         } else {
-          logger.error('Logged out. Remove auth_info and re-authenticate if needed.');
+          logger.error('Logged out. Delete auth_info and scan again.');
         }
       } else if (connection === 'open') {
         logger.info('✅ Bot connected');
@@ -112,7 +98,7 @@ async function startBot() {
 
     sock.ev.on('messages.upsert', async ({ messages }) => {
       const m = messages?.[0];
-      if (!m || !m.message) return;
+      if (!m?.message) return;
       if (m.key.remoteJid === 'status@broadcast') return;
 
       const from = m.key.remoteJid;
@@ -120,52 +106,64 @@ async function startBot() {
       const sender = isGroup ? m.key.participant : from;
       const isOwner = sender === ownerNumber;
 
-      // Extract message text
+      // Extract text
       const msgType = Object.keys(m.message)[0];
       let text = '';
-      if (msgType === 'conversation') text = m.message.conversation || '';
-      else if (msgType === 'extendedTextMessage') text = m.message.extendedTextMessage?.text || '';
-      else if (msgType === 'imageMessage') text = m.message.imageMessage?.caption || '';
-      else if (msgType === 'videoMessage') text = m.message.videoMessage?.caption || '';
-      else if (msgType === 'buttonsResponseMessage') text = m.message.buttonsResponseMessage?.selectedButtonId || '';
-      else if (msgType === 'listResponseMessage') text = m.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+      if (msgType === 'conversation') text = m.message.conversation;
+      else if (msgType === 'extendedTextMessage') text = m.message.extendedTextMessage?.text;
+      else if (msgType === 'imageMessage') text = m.message.imageMessage?.caption;
+      else if (msgType === 'videoMessage') text = m.message.videoMessage?.caption;
+      else if (msgType === 'buttonsResponseMessage') text = m.message.buttonsResponseMessage?.selectedButtonId;
+      else if (msgType === 'listResponseMessage') text = m.message.listResponseMessage?.singleSelectReply?.selectedRowId;
 
-      if (!text.startsWith(prefix)) return;
+      if (!text?.startsWith(prefix)) return;
 
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const cmdName = (args.shift() || '').toLowerCase();
 
-      // Built-in commands
+      // 🔹 Built-in commands
       if (cmdName === 'menu') {
         return sock.sendMessage(from, { text: buildMenuText() }, { quoted: m });
       }
       if (cmdName === 'reloadcmds' && isOwner) {
         loadCommands();
-        return sock.sendMessage(from, { text: `Reloaded commands (${commands.size})` }, { quoted: m });
+        return sock.sendMessage(from, { text: `Reloaded (${commands.size}) commands` }, { quoted: m });
       }
       if (cmdName === 'setmode' && isOwner) {
         const mode = (args[0] || '').toLowerCase();
         if (mode === 'private') {
           isPublic = false;
-          return sock.sendMessage(from, { text: 'Bot set to PRIVATE (owner only).' }, { quoted: m });
-        } else if (mode === 'public') {
-          isPublic = true;
-          return sock.sendMessage(from, { text: 'Bot set to PUBLIC (everyone).' }, { quoted: m });
-        } else {
-          return sock.sendMessage(from, { text: 'Usage: .setmode public|private' }, { quoted: m });
+          return sock.sendMessage(from, { text: '✅ Bot set to PRIVATE (owner only)' }, { quoted: m });
         }
+        if (mode === 'public') {
+          isPublic = true;
+          return sock.sendMessage(from, { text: '🌍 Bot set to PUBLIC (everyone)' }, { quoted: m });
+        }
+        return sock.sendMessage(from, { text: 'Usage: .setmode public|private' }, { quoted: m });
       }
 
+      // respect mode
       if (!isPublic && !isOwner) return;
 
+      // find command
       const cmd = commands.get(cmdName);
       if (!cmd) return;
 
       try {
-        await cmd.handler(sock, m, args, { from, isGroup, sender, isOwner, isPublic, commands });
-      } catch (error) {
-        logger.error(`Error executing command ${cmdName}:`, error);
-        await sock.sendMessage(from, { text: `Error executing command: ${error.message}` }, { quoted: m });
+        // group info + admin checks
+        let groupMetadata = {};
+        let isBotAdmin = false, isSenderAdmin = false;
+        if (isGroup) {
+          groupMetadata = await sock.groupMetadata(from);
+          const admins = groupMetadata.participants.filter(p => p.admin).map(p => p.id);
+          isBotAdmin = admins.includes(sock.user.id);
+          isSenderAdmin = admins.includes(sender);
+        }
+
+        await cmd.handler(sock, m, args, { from, isGroup, sender, isOwner, isPublic, isBotAdmin, isSenderAdmin, commands });
+      } catch (err) {
+        logger.error(`Error in ${cmdName}:`, err);
+        await sock.sendMessage(from, { text: `❌ Error: ${err.message}` }, { quoted: m });
       }
     });
   } catch (err) {
