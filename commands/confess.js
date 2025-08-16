@@ -1,96 +1,14 @@
-// commands/confess.js
 module.exports = {
-    name: "confess",
-    description: "Drop a random funny/silly confession.",
-    execute: async (sock, m) => {
-        const confessions = [
-            "Sometimes I open the fridge and forget why I’m there, so I just grab something random.",
-            "I once laughed so hard at my own joke that I forgot to finish telling it.",
-            "I still check under my bed even though I’m grown, just in case.",
-            "I eat noodles at midnight and pretend I’m in an anime scene.",
-            "I once rewatched a whole series just because I missed one side character.",
-            "Sometimes I text ‘haha’ but I’m actually stone-faced.",
-            "I once lied about watching a movie, then got caught because I didn’t know the main character’s name.",
-            "I listen to sad songs even when I’m happy just to feel something dramatic.",
-            "I once pretended to be asleep so I wouldn’t have to help clean.",
-            "Sometimes I eat cereal at night because breakfast rules don’t control me.",
-            "I once told someone I was busy when I was just lying in bed staring at the ceiling.",
-            "I practice fake scenarios in my head like it’s a TV show.",
-            "I once googled how to boil an egg because I forgot.",
-            "I secretly judge people’s playlist names.",
-            "I once sent a risky text and then threw my phone across the room.",
-            "Sometimes I walk around with headphones on but no music playing.",
-            "I once forgot my own password and had to reset it three times in a row.",
-            "I talk to myself when no one is around like it’s a podcast.",
-            "I once pretended to understand a joke just to fit in.",
-            "Sometimes I rewatch memes like they’re movies.",
-            "I once skipped a workout by convincing myself I’d burn calories laughing.",
-            "I low-key dance in the mirror with full confidence concerts.",
-            "I once made up a story online and someone believed it completely.",
-            "Sometimes I refresh my feed even though I just checked it.",
-            "I once laughed at my teacher’s handwriting and almost got caught.",
-            "I sometimes imagine winning fake arguments in the shower.",
-            "I once texted ‘goodnight’ to avoid a conversation but stayed online for hours.",
-            "I sometimes add things to my to-do list just to cross them off.",
-            "I once pretended to be on the phone to avoid someone.",
-            "I screenshot arguments just in case I need evidence later.",
-            "I once sang so loud in the bathroom that my neighbor knocked on the wall.",
-            "Sometimes I pretend I’m in a music video when it rains.",
-            "I once set multiple alarms and still overslept all of them.",
-            "I rehearse what I’ll say before making phone calls.",
-            "I sometimes eat snacks quietly at night so nobody hears me.",
-            "I once joined a group chat just to lurk and never spoke.",
-            "I sometimes like my own old posts to make them look alive again.",
-            "I once searched for my name on Google just to see what came up.",
-            "I sometimes wave at people who weren’t even waving at me.",
-            "I once laughed at a meme in public and people stared at me like I was crazy.",
-            "I sometimes pretend to text to avoid talking to strangers.",
-            "I once wore mismatched socks for a whole day without noticing.",
-            "I sometimes stay awake just because I don’t want tomorrow to come yet.",
-            "I once stared at the microwave timer like it was a competition.",
-            "I sometimes forget what I was saying mid-sentence and just change the topic.",
-            "I once ate the last slice of pizza and blamed it on my sibling.",
-            "I sometimes scroll so long that I forget why I opened the app.",
-            "I once read spoilers but still acted shocked when watching.",
-            "I sometimes say ‘I’ll sleep early’ then see the sunrise.",
-            "I once laughed so hard water came out of my nose.",
-            "I sometimes watch tutorials for things I’ll never do.",
-            "I once faked being offline while still creeping on stories.",
-            "I sometimes reply ‘LOL’ when I didn’t even smile.",
-            "I once wore sunglasses indoors to look mysterious.",
-            "I sometimes binge-eat snacks and regret it 10 minutes later.",
-            "I once forgot I was charging my phone and yanked the cable like a superhero.",
-            "I sometimes stare at people’s shoes instead of making eye contact.",
-            "I once texted the wrong person and had to play it off as a joke.",
-            "I sometimes listen to songs on repeat until I get sick of them.",
-            "I once bought something just because the packaging looked cool.",
-            "I sometimes plan my life like a movie script in my head.",
-            "I once pretended to know the lyrics and hummed through the whole song.",
-            "I sometimes scroll to the comments before finishing the video.",
-            "I once stared too long at someone and pretended I was looking past them.",
-            "I sometimes practice my evil laugh for no reason.",
-            "I once fell asleep during a call and woke up to the same call.",
-            "I sometimes laugh at the wrong moment just to confuse people.",
-            "I once held in a sneeze and almost exploded.",
-            "I sometimes like typing ‘lmao’ more than actually laughing.",
-            "I once restarted my WiFi just to avoid saying I was lagging on purpose.",
-            "I sometimes open the fridge just for inspiration, not food.",
-            "I once liked a post by accident and immediately unliked it, hoping they didn’t notice.",
-            "I sometimes daydream about fake awards I’ll never win.",
-            "I once practiced my autograph even though I’m not famous.",
-            "I sometimes act like I didn’t see a message just to look busy.",
-            "I once talked to my pet like they were my therapist.",
-            "I sometimes fake laugh at my own joke so others will laugh too.",
-            "I once put my phone on airplane mode to avoid someone’s call.",
-            "I sometimes forget the year when writing the date.",
-            "I once practiced cool handshakes with myself.",
-            "I sometimes replay old conversations in my head and cringe.",
-            "I once scrolled for hours and ended up in 2012 memes.",
-            "I sometimes take mirror selfies then delete them immediately.",
-            "I once hid my snacks so well even I couldn’t find them later."
-        ];
-
-        const confession = confessions[Math.floor(Math.random() * confessions.length)];
-        await sock.sendMessage(m.chat, { text: confession }, { quoted: m });
+  name: "confess",
+  description: "Send a fake anonymous confession in the group (sender still visible).",
+  async execute(sock, m, args) {
+    if (!args || args.length === 0) {
+      return sock.sendMessage(m.chat, { text: "❗ Please type your confession after the command.\n\nExample: .confess I have a crush on someone here..." }, { quoted: m });
     }
+
+    const confession = args.join(" ");
+    const msg = `💬 *Anonymous Confession*\n\n"${confession}"`;
+
+    await sock.sendMessage(m.chat, { text: msg }, { quoted: null });
+  }
 };
