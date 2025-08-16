@@ -1,10 +1,9 @@
 services:
-  - type: web
+  - type: worker
     name: gbolahan-whatsappbot
     env: node
     plan: free
     branch: main
-    rootDir: ./
     buildCommand: npm install
     startCommand: node index.js
     autoDeploy: true
