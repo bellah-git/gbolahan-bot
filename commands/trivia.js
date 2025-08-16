@@ -1,60 +1,57 @@
-module.exports = {
-    name: "trivia",
-    description: "Get a random trivia question.",
-    execute(sock, msg, args) {
-        const trivia = [
-            "What is the capital of France? (Answer: Paris)",
-            "Who painted the Mona Lisa? (Answer: Leonardo da Vinci)",
-            "What is the smallest planet in our solar system? (Answer: Mercury)",
-            "What year did World War II end? (Answer: 1945)",
-            "What is the fastest land animal? (Answer: Cheetah)",
-            "What is the largest ocean on Earth? (Answer: Pacific Ocean)",
-            "Who wrote 'Romeo and Juliet'? (Answer: William Shakespeare)",
-            "What is the hardest natural substance on Earth? (Answer: Diamond)",
-            "Which country is known as the Land of the Rising Sun? (Answer: Japan)",
-            "What is the boiling point of water in Celsius? (Answer: 100°C)",
-            "Who was the first man to step on the moon? (Answer: Neil Armstrong)",
-            "What gas do humans need to survive? (Answer: Oxygen)",
-            "Which planet is known as the Red Planet? (Answer: Mars)",
-            "What is the largest mammal? (Answer: Blue Whale)",
-            "What is the square root of 64? (Answer: 8)",
-            "Which continent is the Sahara Desert located in? (Answer: Africa)",
-            "Who discovered gravity under an apple tree? (Answer: Isaac Newton)",
-            "What is the longest river in the world? (Answer: Nile River)",
-            "What is the national sport of Japan? (Answer: Sumo wrestling)",
-            "Which animal is known as the King of the Jungle? (Answer: Lion)",
-            "What is the chemical symbol for gold? (Answer: Au)",
-            "What is the capital city of Italy? (Answer: Rome)",
-            "What is the main language spoken in Brazil? (Answer: Portuguese)",
-            "How many continents are there on Earth? (Answer: Seven)",
-            "What is the freezing point of water in Celsius? (Answer: 0°C)",
-            "What is the tallest mountain in the world? (Answer: Mount Everest)",
-            "What is the main ingredient in guacamole? (Answer: Avocado)",
-            "Which organ pumps blood through the human body? (Answer: The heart)",
-            "What year did the Titanic sink? (Answer: 1912)",
-            "Which is the only mammal capable of true flight? (Answer: Bat)",
-            "What is the capital of Egypt? (Answer: Cairo)",
-            "What is the largest desert on Earth? (Answer: Antarctica)",
-            "How many sides does a hexagon have? (Answer: Six)",
-            "Which famous scientist developed the theory of relativity? (Answer: Albert Einstein)",
-            "What is the capital city of Canada? (Answer: Ottawa)",
-            "What type of blood can be donated to anyone? (Answer: O negative)",
-            "What is the currency of the United Kingdom? (Answer: Pound sterling)",
-            "Which bird is a symbol of peace? (Answer: Dove)",
-            "Which planet is closest to the sun? (Answer: Mercury)",
-            "What is the tallest animal on Earth? (Answer: Giraffe)",
-            "How many players are on a soccer team? (Answer: 11)",
-            "What element does 'O' stand for on the periodic table? (Answer: Oxygen)",
-            "Who invented the lightbulb? (Answer: Thomas Edison)",
-            "What is the capital of Australia? (Answer: Canberra)",
-            "Which is the largest internal organ in the human body? (Answer: Liver)",
-            "What country is famous for the Great Wall? (Answer: China)",
-            "What is the chemical formula for water? (Answer: H₂O)",
-            "Which country invented pizza? (Answer: Italy)",
-            "What planet has rings around it? (Answer: Saturn)"
-        ];
+const triviaQuestions = [
+  { q: "What is the capital of France?", a: "Paris" },
+  { q: "Who painted the Mona Lisa?", a: "Leonardo da Vinci" },
+  { q: "What is the largest planet in our solar system?", a: "Jupiter" },
+  { q: "Which year did World War II end?", a: "1945" },
+  { q: "What is the chemical symbol for gold?", a: "Au" },
+  { q: "Who is the author of Harry Potter?", a: "J.K. Rowling" },
+  { q: "What is the hardest natural substance?", a: "Diamond" },
+  { q: "What is the national sport of Japan?", a: "Sumo Wrestling" },
+  { q: "Which gas do plants absorb from the atmosphere?", a: "Carbon Dioxide" },
+  { q: "What is the square root of 144?", a: "12" },
+  { q: "Which animal is known as the King of the Jungle?", a: "Lion" },
+  { q: "Which is the smallest continent?", a: "Australia" },
+  { q: "What is the longest river in the world?", a: "Nile River" },
+  { q: "Who developed the theory of relativity?", a: "Albert Einstein" },
+  { q: "Which is the fastest land animal?", a: "Cheetah" },
+  { q: "In which country is the Great Pyramid of Giza?", a: "Egypt" },
+  { q: "Which is the tallest mountain in the world?", a: "Mount Everest" },
+  { q: "What is the capital of Nigeria?", a: "Abuja" },
+  { q: "Who was the first man on the moon?", a: "Neil Armstrong" },
+  { q: "Which ocean is the largest?", a: "Pacific Ocean" },
+  { q: "Which country invented paper?", a: "China" },
+  { q: "Which is the most spoken language in the world?", a: "English (by learners) / Mandarin (native speakers)" },
+  { q: "Which continent is known as the 'Dark Continent'?", a: "Africa" },
+  { q: "What is H2O commonly known as?", a: "Water" },
+  { q: "What is the currency of Japan?", a: "Yen" },
+  { q: "How many continents are there?", a: "Seven" },
+  { q: "What is the capital city of Italy?", a: "Rome" },
+  { q: "Which planet is known as the Red Planet?", a: "Mars" },
+  { q: "Who discovered gravity?", a: "Isaac Newton" },
+  { q: "What is the capital city of Ghana?", a: "Accra" },
+  { q: "Which is the largest desert in the world?", a: "Sahara Desert" },
+  { q: "What is the freezing point of water in Celsius?", a: "0°C" },
+  { q: "Which is the national animal of India?", a: "Tiger" },
+  { q: "What is the boiling point of water in Celsius?", a: "100°C" },
+  { q: "Which planet is closest to the sun?", a: "Mercury" },
+  { q: "Which organ pumps blood in the human body?", a: "Heart" },
+  { q: "Which instrument measures temperature?", a: "Thermometer" },
+  { q: "How many players are there in a football team?", a: "11" },
+  { q: "What is the capital city of Kenya?", a: "Nairobi" }
+];
 
-        const chosen = trivia[Math.floor(Math.random() * trivia.length)];
-        sock.sendMessage(msg.key.remoteJid, { text: `🎯 Trivia Time!\n\n${chosen}` }, { quoted: msg });
-    }
+module.exports = {
+  name: "trivia",
+  description: "Asks a trivia question and reveals the answer after some time.",
+  execute(msg) {
+    const trivia = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)];
+    const delay = Math.floor(Math.random() * (30000 - 15000 + 1)) + 15000;
+
+    msg.reply(`❓ Trivia Time:\n${trivia.q}\n\n⏳ Think fast, answer before time runs out!`);
+
+    setTimeout(() => {
+      msg.reply(`✅ Answer: *${trivia.a}*`);
+    }, delay);
+  }
 };
+
